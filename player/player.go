@@ -3,8 +3,6 @@ package player
 import (
 	"go-game/config"
 	"go-game/items"
-
-	"image"
 )
 
 // Item represents an item in the game.
@@ -26,7 +24,6 @@ type Player struct {
     Coordinates  [2]int
     Inventory   []items.Item// Use the imported Item type
     Facing       Direction // Add this field to track the facing direction
-    // ... other fields
 }
 
 func NewPlayer(x, y float64, coordinates [2]int) Player {
@@ -38,54 +35,27 @@ func NewPlayer(x, y float64, coordinates [2]int) Player {
 }
 
 
-// And a method to remove items from the inventory (if needed)
+func (p *Player) StartingPositionInNewRoom(direction Direction) (float64, float64) {
+    var newX, newY float64
 
-
-func (p *Player) CheckCollisionWithItem(item *items.Item) bool {
-
-
-    playerRect := image.Rect(
-        int(p.X),
-        int(p.Y),
-        int(p.X)+config.PlayerWidth,
-        int(p.Y)+config.PlayerHeight,
-    )
-    itemRect := image.Rect(
-        item.Position.X,
-        item.Position.Y,
-        item.Position.X+item.Width,
-        item.Position.Y+item.Height,
-    )
-
-    // Debug output for bounding boxes
-  
-
-    return playerRect.Overlaps(itemRect)
-}
-
-func (p *Player) ThrowCatFood() {
-  
-    for i, item := range p.Inventory {
-    
-        if item.Name == "CatFood" && item.IsShootable {
-            // Determine the velocity based on the facing direction
-            var velocityX, velocityY float64
-            switch p.Facing {
-            case DirectionUp:
-                velocityY = -5.0 // Example velocity going up
-            case DirectionDown:
-                velocityY = 5.0 // Example velocity going down
-            case DirectionLeft:
-                velocityX = -5.0 // Example velocity going left
-            case DirectionRight:
-                velocityX = 5.0 // Example velocity going right
-            }
-
-            // Create and throw the projectile
-            projectile := items.NewProjectile(p.X, p.Y, velocityX, velocityY)
-            items.Projectiles = append(items.Projectiles, projectile)
-            p.Inventory = append(p.Inventory[:i], p.Inventory[i+1:]...)
-            break
-        }
+    switch direction {
+    case DirectionRight:
+        // Start at the left edge of the new room
+        newX = 0
+        newY = p.Y // Keep the vertical position the same
+    case DirectionLeft:
+        // Start at the right edge of the new room
+        newX = config.ScreenWidth - float64(config.PlayerWidth)
+        newY = p.Y // Keep the vertical position the same
+    case DirectionUp:
+        // Start at the bottom of the new room
+        newX = p.X // Keep the horizontal position the same
+        newY = config.ScreenHeight - float64(config.PlayerHeight)
+    case DirectionDown:
+        // Start at the top of the new room
+        newX = p.X // Keep the horizontal position the same
+        newY = 0
     }
+
+    return newX, newY
 }

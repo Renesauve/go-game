@@ -7,13 +7,8 @@ const (
 	PlayerHeight = 24
 	MinimapRoomSize = 30 
 	MinimapPadding  = 15  
-	GridSize = 3
+	GridSize = 5
 	Speed = 15.0
-	InventoryItemSize = 100
 )
 
 
-var (
-	itemRoomGenerated = false
-	bossRoomGenerated = false
-)
