@@ -2,6 +2,7 @@ package room
 
 import (
 	"go-game/config"
+	"go-game/items"
 	"image"
 	// other necessary imports
 )
@@ -19,6 +20,7 @@ type Room struct {
     Obstacles []Obstacle
     RoomType  RoomType
 	StartingRoom bool
+    Items []items.Item
     // other room details
 }
 const (
@@ -35,8 +37,11 @@ func GenerateRoom(x, y int, roomType RoomType, roomGrid [config.GridSize][config
         return nil // Bounds check and room existence check
     }
 
+    
+
     newRoom := &Room{
         RoomType: roomType,
+        Items: []items.Item{},
     }
 
     roomGrid[x][y] = newRoom

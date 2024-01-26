@@ -2,7 +2,9 @@ package game
 
 import (
 	"go-game/config"
+	"go-game/items"
 	"go-game/player"
+
 	"go-game/room"
 	"image"
 	"image/color"
@@ -39,6 +41,7 @@ type Game struct {
     BambiPosition image.Point // Initialize to (0,0)
     BambiVelocity image.Point 
     State GameState // Start at the main menu
+    CollectedItems map[string]bool
     
 }
 
@@ -62,6 +65,7 @@ func NewGame() *Game {
         RoomsVisited: [config.GridSize][config.GridSize]bool{},
         RoomGrid: roomGrid,
         State: MainMenu, // Start at the main menu
+        CollectedItems: make(map[string]bool),
     }
    
 }
@@ -73,7 +77,7 @@ func (g *Game) GenerateRooms() {
     room.GenerateRoom(startX, startY, room.RegularRoom, g.RoomGrid)
    
     bossRoomPos, itemRoomPos := getRandomSpecialRoomPositions(config.GridSize)
-   
+    
     for x := 0; x < config.GridSize; x++ {
         for y := 0; y < config.GridSize; y++ {
             if g.RoomGrid[x][y] == nil {
@@ -92,15 +96,23 @@ func (g *Game) GenerateRooms() {
 }
 
 func (g *Game) Update() error {
-    
     if g.CurrentRoom == nil {
-     
         g.GenerateRooms()
     }
+    for i := range items.Projectiles {
+        items.Projectiles[i].Update()
+    }
+    
+    
     
     proposedX, proposedY := g.Player.X, g.Player.Y
     
+    g.PickupItems()
 
+    if ebiten.IsKeyPressed(ebiten.KeyX) { // Assuming 'X' is the throw button
+    g.Player.ThrowCatFood()
+  
+}
 
     if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
         proposedX += config.Speed
@@ -165,6 +177,7 @@ func (g *Game) Update() error {
     if !collision {
         g.Player.X, g.Player.Y = proposedX, proposedY // Update position if no collision
     } 
+
     if g.CurrentRoom != nil && g.CurrentRoom.RoomType == room.BossRoom {
         // Randomize Bambi's movement
         if rand.Intn(10) == 0 { // This will only change direction approximately every 10 frames
@@ -220,18 +233,39 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 
 func (g *Game) Draw(screen *ebiten.Image) {
-
+    for _, projectile := range items.Projectiles {
+        projectile.Draw(screen)
+    }
     if g.CurrentRoom != nil && g.CurrentRoom.RoomType == room.BossRoom && g.BossImage != nil {
         opts := &ebiten.DrawImageOptions{}
         opts.GeoM.Translate(float64(g.BambiPosition.X), float64(g.BambiPosition.Y))
         screen.DrawImage(g.BossImage, opts)
     }
-
-    if g.CurrentRoom != nil && g.CurrentRoom.RoomType == room.ItemRoom && g.ItemImage != nil {
-        opts := &ebiten.DrawImageOptions{}
-  
-        screen.DrawImage(g.ItemImage, opts)
+    if g.CurrentRoom != nil {
+        for _, item := range g.CurrentRoom.Items {
+            if !item.Collected { // Only draw the item if it hasn't been collected
+                opts := &ebiten.DrawImageOptions{}
+                opts.GeoM.Translate(float64(item.Position.X), float64(item.Position.Y))
+                screen.DrawImage(item.Image, opts)
+            }
+        }
     }
+
+    for i, item := range g.Player.Inventory {
+        opts := &ebiten.DrawImageOptions{}
+
+        // Scale the image to the defined inventory item size
+        scale := float64(config.InventoryItemSize) / float64(item.Image.Bounds().Dx())
+        opts.GeoM.Scale(scale, scale)
+
+        // Calculate the position for each item
+        xPos := float64(i * (config.InventoryItemSize + 5)) // 5 pixels space between items
+        yPos := float64(config.ScreenHeight - config.InventoryItemSize) // Positioned at bottom
+
+        opts.GeoM.Translate(xPos, yPos)
+        screen.DrawImage(item.Image, opts)
+    }
+    
 
     minimapStartX := config.ScreenWidth - config.GridSize*config.MinimapRoomSize - config.MinimapPadding
     minimapStartY := config.ScreenHeight - config.GridSize*config.MinimapRoomSize - config.MinimapPadding
@@ -339,7 +373,7 @@ func (g *Game) getNextRoom(direction string) *room.Room {
     }
     if nextRoom != nil && nextRoom.RoomType == room.ItemRoom && g.CurrentRoom != nextRoom {
         g.CurrentRoom = nextRoom
-        g.initializeItemRoom() // Initialize the boss room only once
+        g.initializeItemRoom() // Initialize the item room only once
     }
 
     
@@ -381,28 +415,23 @@ func (g *Game) initializeBossRoom() {
 }
 
 func (g *Game) initializeItemRoom() {
-    if g.ItemImage == nil {
-        var err error
-        g.ItemImage, _, err = ebitenutil.NewImageFromFile(`assets/catfood.png`)
-        if err != nil {
-            log.Fatal(err)
+    if !g.CollectedItems["CatFood"] { // Check if CatFood has been collected
+        item := items.InitializeItem(items.CatFood, "CatFood", `assets/catfood.png`, config.ScreenWidth, config.ScreenHeight, true)
+        g.CurrentRoom.Items = append(g.CurrentRoom.Items, item)
+     
+    }
+}
+
+func (g *Game) PickupItems() {
+    if g.CurrentRoom != nil {
+        for i := 0; i < len(g.CurrentRoom.Items); i++ {
+            if !g.CurrentRoom.Items[i].Collected && g.Player.CheckCollisionWithItem(&g.CurrentRoom.Items[i]) {
+                g.CurrentRoom.Items[i].Collected = true
+                g.CurrentRoom.Items[i].IsShootable = true
+                g.Player.Inventory = append(g.Player.Inventory, g.CurrentRoom.Items[i])
+                g.CollectedItems[g.CurrentRoom.Items[i].Name] = true
+                
+            }
         }
     }
-
-    centerX, centerY := config.ScreenWidth/2, config.ScreenHeight/2
-    g.BambiPosition = image.Point{X: centerX - g.ItemImage.Bounds().Dx()/2, Y: centerY - g.ItemImage.Bounds().Dy()/2}
-
-
-
-    bambiObstacle := room.Obstacle{
-        Rect: image.Rect(
-            g.BambiPosition.X,
-            g.BambiPosition.Y,
-            g.BambiPosition.X + g.ItemImage.Bounds().Dx(),
-            g.BambiPosition.Y + g.ItemImage.Bounds().Dy(),
-        ),
-      
-    }
-
-    g.CurrentRoom.Obstacles = append(g.CurrentRoom.Obstacles, bambiObstacle)
 }

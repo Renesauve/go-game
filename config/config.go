@@ -7,9 +7,9 @@ const (
 	PlayerHeight = 24
 	MinimapRoomSize = 30 
 	MinimapPadding  = 15  
-	GridSize = 5
+	GridSize = 3
 	Speed = 15.0
-
+	InventoryItemSize = 100
 )
 
 
