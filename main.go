@@ -11,7 +11,7 @@ import (
 func main() {
 	// Initialize the game structure
 	gameInstance := game.NewGame()
-	gameInstance.GenerateRooms()
+
 	// Set up Ebiten window properties using constants from config package
 	ebiten.SetWindowSize(config.ScreenWidth, config.ScreenHeight)
 	ebiten.SetWindowTitle("Feed Bambi Game")

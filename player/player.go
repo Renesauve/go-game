@@ -1,7 +1,6 @@
 package player
 
 import (
-	"fmt"
 	"go-game/config"
 	"go-game/items"
 
@@ -12,10 +11,21 @@ import (
 
 // Import the package that defines the Item type
 
+type Direction int
+
+const (
+    DirectionUp Direction = iota
+    DirectionDown
+    DirectionLeft
+    DirectionRight
+)
+
+
 type Player struct {
     X, Y         float64
     Coordinates  [2]int
     Inventory   []items.Item// Use the imported Item type
+    Facing       Direction // Add this field to track the facing direction
     // ... other fields
 }
 
@@ -54,10 +64,24 @@ func (p *Player) CheckCollisionWithItem(item *items.Item) bool {
 }
 
 func (p *Player) ThrowCatFood() {
+  
     for i, item := range p.Inventory {
-        fmt.Println(item)
+    
         if item.Name == "CatFood" && item.IsShootable {
-            velocityX, velocityY := 5.0, 0.0 // Example velocities, adjust as needed
+            // Determine the velocity based on the facing direction
+            var velocityX, velocityY float64
+            switch p.Facing {
+            case DirectionUp:
+                velocityY = -5.0 // Example velocity going up
+            case DirectionDown:
+                velocityY = 5.0 // Example velocity going down
+            case DirectionLeft:
+                velocityX = -5.0 // Example velocity going left
+            case DirectionRight:
+                velocityX = 5.0 // Example velocity going right
+            }
+
+            // Create and throw the projectile
             projectile := items.NewProjectile(p.X, p.Y, velocityX, velocityY)
             items.Projectiles = append(items.Projectiles, projectile)
             p.Inventory = append(p.Inventory[:i], p.Inventory[i+1:]...)

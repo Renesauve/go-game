@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"go-game/config"
 	"go-game/items"
 	"go-game/player"
@@ -42,6 +43,7 @@ type Game struct {
     BambiVelocity image.Point 
     State GameState // Start at the main menu
     CollectedItems map[string]bool
+    LastKeyState map[ebiten.Key]bool
     
 }
 
@@ -59,19 +61,39 @@ func NewGame() *Game {
     roomGrid := [config.GridSize][config.GridSize]*room.Room{}
 
   
-    return &Game{
-        Player: p,
-        Rooms:  make(map[string]*room.Room),
+    g := &Game{
+        Player:       p,
+        Rooms:        make(map[string]*room.Room),
         RoomsVisited: [config.GridSize][config.GridSize]bool{},
-        RoomGrid: roomGrid,
-        State: MainMenu, // Start at the main menu
+        RoomGrid:     roomGrid,
+        State:        MainMenu, // Start at the main menu
         CollectedItems: make(map[string]bool),
+        LastKeyState: make(map[ebiten.Key]bool),
+        // Initialize other fields...
     }
+    bossRoomPos, itemRoomPos := g.GenerateRooms() // This function now needs to return the boss and item room positions
+
+    // Access the boss and item rooms using the positions provided by GenerateRooms
+    bossRoom := g.RoomGrid[bossRoomPos[0]][bossRoomPos[1]]
+    itemRoom := g.RoomGrid[itemRoomPos[0]][itemRoomPos[1]]
+    // Save the current room
+    currentRoom := g.CurrentRoom
+    // Temporarily set the current room to the boss room to initialize it
+    g.CurrentRoom = bossRoom
+    g.initializeBossRoom()
+    // Temporarily set the current room to the item room to initialize it
+    g.CurrentRoom = itemRoom
+    g.initializeItemRoom()
+    // Restore the current room
+    g.CurrentRoom = currentRoom
+
+    return g
+    
    
 }
 
 
-func (g *Game) GenerateRooms() {
+func (g *Game) GenerateRooms() ([2]int, [2]int) {
    
     startX, startY := config.GridSize / 2, config.GridSize / 2
     room.GenerateRoom(startX, startY, room.RegularRoom, g.RoomGrid)
@@ -93,6 +115,7 @@ func (g *Game) GenerateRooms() {
             }
         }
     }
+    return bossRoomPos, itemRoomPos
 }
 
 func (g *Game) Update() error {
@@ -102,23 +125,24 @@ func (g *Game) Update() error {
     for i := range items.Projectiles {
         items.Projectiles[i].Update()
     }
-    
+  
     
     
     proposedX, proposedY := g.Player.X, g.Player.Y
     
     g.PickupItems()
 
-    if ebiten.IsKeyPressed(ebiten.KeyX) { // Assuming 'X' is the throw button
-    g.Player.ThrowCatFood()
-  
-}
+    if ebiten.IsKeyPressed(ebiten.KeyX) {
+    
+        g.Player.ThrowCatFood()
+    }
 
     if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
         proposedX += config.Speed
+        g.Player.Facing = player.DirectionRight
         if proposedX > config.ScreenWidth - float64(config.PlayerWidth) {
             if g.Player.Coordinates[0] < config.GridSize-1 {
-                g.CurrentRoom = g.getNextRoom("right")
+                g.CurrentRoom = g.GetRoomInDirection("right")
                 proposedX = 0 // Reset to left edge of the new room
             } else {
                 proposedX = config.ScreenWidth - float64(config.PlayerWidth) // Prevent leaving the grid
@@ -128,9 +152,10 @@ func (g *Game) Update() error {
 
     if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
         proposedX -= config.Speed
+        g.Player.Facing = player.DirectionLeft
         if proposedX < 0 { // Check for left boundary
             if g.Player.Coordinates[0] > 0 {
-                g.CurrentRoom = g.getNextRoom("left")
+                g.CurrentRoom = g.GetRoomInDirection("left")
          
                 proposedX = config.ScreenWidth - float64(config.PlayerWidth) // Start at the right edge of the new room
             } else {
@@ -141,10 +166,11 @@ func (g *Game) Update() error {
     
     if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
         proposedY -= config.Speed
+        g.Player.Facing = player.DirectionUp
         if proposedY < 0 { // Check for top boundary
             if g.Player.Coordinates[1] > 0 {
-                g.CurrentRoom = g.getNextRoom("up")
-           
+                g.CurrentRoom = g.GetRoomInDirection("up")
+                
                 proposedY = config.ScreenHeight - float64(config.PlayerHeight) // Start at the bottom of the new room
             } else {
                 proposedY = 0 // Stay within current room
@@ -154,9 +180,10 @@ func (g *Game) Update() error {
     
     if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
         proposedY += config.Speed
+        g.Player.Facing = player.DirectionDown
         if proposedY > config.ScreenHeight - float64(config.PlayerHeight) { // Check for bottom boundary
             if g.Player.Coordinates[1] < config.GridSize-1 {
-                g.CurrentRoom = g.getNextRoom("down")
+                g.CurrentRoom = g.GetRoomInDirection("down")
               
                 proposedY = 0 // Start at the top of the new room
             } else {
@@ -221,6 +248,7 @@ func (g *Game) Update() error {
         }
     }
 
+    g.LastKeyState[ebiten.KeyX] = ebiten.IsKeyPressed(ebiten.KeyX)
 
     return nil
 }
@@ -340,10 +368,7 @@ func getRandomSpecialRoomPositions(gridSize int, ) ([2]int, [2]int) {
 
 
 
-func (g *Game) getNextRoom(direction string) *room.Room {
-    
-
-
+func (g *Game) GetRoomInDirection(direction string) *room.Room {
     nextX, nextY := g.Player.Coordinates[0], g.Player.Coordinates[1]
     switch direction {
     case "up":
@@ -355,37 +380,13 @@ func (g *Game) getNextRoom(direction string) *room.Room {
     case "right":
         nextX++
     }
-
     if nextX < 0 || nextX >= config.GridSize || nextY < 0 || nextY >= config.GridSize {
         return g.CurrentRoom // Prevent leaving the grid
     }
-
-
-
     g.Player.Coordinates[0], g.Player.Coordinates[1] = nextX, nextY
-
     nextRoom := g.RoomGrid[nextX][nextY]
-
-    // Check if the next room is a BossRoom and initialize it
-    if nextRoom != nil && nextRoom.RoomType == room.BossRoom && g.CurrentRoom != nextRoom {
-        g.CurrentRoom = nextRoom
-        g.initializeBossRoom() // Initialize the boss room only once
-    }
-    if nextRoom != nil && nextRoom.RoomType == room.ItemRoom && g.CurrentRoom != nextRoom {
-        g.CurrentRoom = nextRoom
-        g.initializeItemRoom() // Initialize the item room only once
-    }
-
-    
-
     return nextRoom
 }
-
-
-
-
-
-
 
 func (g *Game) initializeBossRoom() {
     if g.BossImage == nil {
@@ -399,7 +400,6 @@ func (g *Game) initializeBossRoom() {
     centerX, centerY := config.ScreenWidth/2, config.ScreenHeight/2
     g.BambiPosition = image.Point{X: centerX - g.BossImage.Bounds().Dx()/2, Y: centerY - g.BossImage.Bounds().Dy()/2}
     g.BambiVelocity = image.Point{X: 1, Y: 1} // Example initial velocity
-
 
     bambiObstacle := room.Obstacle{
         Rect: image.Rect(
@@ -425,13 +425,22 @@ func (g *Game) initializeItemRoom() {
 func (g *Game) PickupItems() {
     if g.CurrentRoom != nil {
         for i := 0; i < len(g.CurrentRoom.Items); i++ {
+            // Check if the item is not collected and there's a collision with the player
             if !g.CurrentRoom.Items[i].Collected && g.Player.CheckCollisionWithItem(&g.CurrentRoom.Items[i]) {
+                // Mark the item as collected
                 g.CurrentRoom.Items[i].Collected = true
-                g.CurrentRoom.Items[i].IsShootable = true
-                g.Player.Inventory = append(g.Player.Inventory, g.CurrentRoom.Items[i])
-                g.CollectedItems[g.CurrentRoom.Items[i].Name] = true
-                
+
+                // Add the item to the player's inventory if it's not already added
+          
+                if _, exists := g.CollectedItems[g.CurrentRoom.Items[i].Name]; !exists {
+                    g.Player.Inventory = append(g.Player.Inventory, g.CurrentRoom.Items[i])
+                    g.Player.Inventory[i].IsShootable = true
+                    g.CollectedItems[g.CurrentRoom.Items[i].Name] = true
+                    fmt.Println(g.CurrentRoom.Items[i].IsShootable)
+                }
             }
         }
     }
 }
+
+
