@@ -33,7 +33,6 @@ type Game struct {
 
 func NewGame() *Game {
     gridMiddleX, gridMiddleY := 2, 2 
-
     // Calculate screen position from grid position
     screenMiddleX := float64(gridMiddleX) * (float64(config.ScreenWidth) / float64(config.GridSize)) + (float64(config.ScreenWidth) / float64(config.GridSize) / 2.0) - float64(config.PlayerWidth)/2.0
     screenMiddleY := float64(gridMiddleY) * (float64(config.ScreenHeight) / float64(config.GridSize)) + (float64(config.ScreenHeight) / float64(config.GridSize) / 2.0) - float64(config.PlayerHeight)/2.0
@@ -55,63 +54,9 @@ func NewGame() *Game {
 }
 
 func (g *Game) Update() error {
-    proposedX, proposedY := g.Player.X, g.Player.Y
+ 
+    g.handlePlayerMovement()
     
-
-
-    if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-        proposedX += config.Speed
-        if proposedX > config.ScreenWidth - float64(config.PlayerWidth) && g.Player.Coordinates[0] < config.GridSize-1 {
-            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionRight)
-            if newRoom != nil {
-                g.CurrentRoom = newRoom
-                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
-                proposedX = 0 // Reset to left edge of the new room
-            }
-        }
-    }
-
-    if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-        proposedX -= config.Speed
-        if proposedX < 0 && g.Player.Coordinates[0] > 0 {
-            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionLeft)
-            if newRoom != nil {
-                g.CurrentRoom = newRoom
-                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
-                proposedX = config.ScreenWidth - float64(config.PlayerWidth) // Start at the right edge of the new room
-            }
-        }
-    }
-
-    if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-        proposedY -= config.Speed
-        if proposedY < 0 && g.Player.Coordinates[1] > 0 {
-            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionUp)
-            if newRoom != nil {
-                g.CurrentRoom = newRoom
-                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
-                proposedY = config.ScreenHeight - float64(config.PlayerHeight) // Start at the bottom of the new room
-            }
-        }
-    }
-
-    if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-        proposedY += config.Speed
-        if proposedY > config.ScreenHeight - float64(config.PlayerHeight) && g.Player.Coordinates[1] < config.GridSize-1 {
-            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionDown)
-            if newRoom != nil {
-                g.CurrentRoom = newRoom
-                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
-                proposedY = 0 // Start at the top of the new room
-            }
-        }
-    }
-
-
-    if proposedX >= 0 && proposedX <= config.ScreenWidth-float64(config.PlayerWidth) &&
-    proposedY >= 0 && proposedY <= config.ScreenHeight-float64(config.PlayerHeight) {
-     g.Player.X, g.Player.Y = proposedX, proposedY
- }
     g.RoomsVisited[g.Player.Coordinates[0]][g.Player.Coordinates[1]] = true
 
     return nil
@@ -154,14 +99,66 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 
-
-
-
-
-
-
-
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
     // For simplicity, let's return the outside size; you can adjust as needed for your game
     return outsideWidth, outsideHeight
+}
+
+
+func (g *Game) handlePlayerMovement() (float64, float64) {
+    proposedX, proposedY := g.Player.X, g.Player.Y
+    if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+        proposedX += config.Speed
+        if proposedX > config.ScreenWidth - float64(config.PlayerWidth) && g.Player.Coordinates[0] < config.GridSize-1 {
+            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionRight)
+            if newRoom != nil {
+                g.CurrentRoom = newRoom
+                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
+                proposedX = 0 // Reset to left edge of the new room
+            }
+        }
+    }
+    if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+        proposedX -= config.Speed
+        if proposedX < 0 && g.Player.Coordinates[0] > 0 {
+            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionLeft)
+            if newRoom != nil {
+                g.CurrentRoom = newRoom
+                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
+                proposedX = config.ScreenWidth - float64(config.PlayerWidth) // Start at the right edge of the new room
+            }
+        }
+    }
+
+    if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+        proposedY -= config.Speed
+        if proposedY < 0 && g.Player.Coordinates[1] > 0 {
+            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionUp)
+            if newRoom != nil {
+                g.CurrentRoom = newRoom
+                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
+                proposedY = config.ScreenHeight - float64(config.PlayerHeight) // Start at the bottom of the new room
+            }
+        }
+    }
+
+    if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+        proposedY += config.Speed
+        if proposedY > config.ScreenHeight - float64(config.PlayerHeight) && g.Player.Coordinates[1] < config.GridSize-1 {
+            newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionDown)
+            if newRoom != nil {
+                g.CurrentRoom = newRoom
+                g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
+                proposedY = 0 // Start at the top of the new room
+            }
+        }
+    }
+
+
+    if proposedX >= 0 && proposedX <= config.ScreenWidth-float64(config.PlayerWidth) &&
+        proposedY >= 0 && proposedY <= config.ScreenHeight-float64(config.PlayerHeight) {
+        g.Player.X, g.Player.Y = proposedX, proposedY
+    }
+    return proposedX, proposedY
+  
 }
