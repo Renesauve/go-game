@@ -7,14 +7,12 @@ type Player struct {
     // ... other fields
 }
 
-func NewPlayer(x, y float64) Player {
+func NewPlayer(x, y float64, coordinates [2]int) Player {
     return Player{
         X: x,
         Y: y,
         Inventory: make(map[string]int),
-
-
-        // ... other initialization
+        Coordinates: [2]int{coordinates[0], coordinates[1]},
     }
 }
 

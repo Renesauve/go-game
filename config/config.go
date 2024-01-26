@@ -5,10 +5,11 @@ const (
 	ScreenHeight = 1080
 	PlayerWidth  = 24
 	PlayerHeight = 24
-	MaxRooms = 7
 	MinimapRoomSize = 30 
 	MinimapPadding  = 15  
-	GridSize = 5 
+	GridSize = 5
+	Speed = 15.0
+
 )
 
 
