@@ -14,7 +14,7 @@ func main() {
 
 	// Set up Ebiten window properties using constants from config package
 	ebiten.SetWindowSize(config.ScreenWidth, config.ScreenHeight)
-	ebiten.SetWindowTitle("Feed Bambi Game")
+	ebiten.SetWindowTitle("Cool New Game")
 
 	// Start the game
 	if err := ebiten.RunGame(gameInstance); err != nil {
