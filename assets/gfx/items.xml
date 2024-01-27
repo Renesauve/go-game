@@ -1,0 +1,7 @@
+<items gfxroot="gfx/items/" version="1">
+    <weapon description="A razor-sharp spear that cuts through the air with ease." gfx="Weapon_001_Spear.png" id="1" name="Spear" damage="3" speed="1" handedness="two-handed" range="long" />
+    <weapon description="A mighty battle axe that crushes foes with brute force." gfx="Weapon_002_BattleAxe.png" id="2" name="Battle Axe" damage="5" speed="1" handedness="two-handed" range="standard" />
+    <weapon description="A finely crafted sword that slices with precision." gfx="Weapon_003_Sword.png" id="3" name="Sword" damage="3" speed="1" handedness="one-handed" range="standard" />
+    <armor description="A sturdy shield that protects against enemy attacks." gfx="Armor_004_Shield.png" id="4" name="Shield" defense="5" />
+    <armor description="A heavy helmet that protects the head from harm." gfx="Armor_Helmet.png" id="5" name="Helmet" defense="3" />
+</items>

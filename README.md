@@ -1,5 +1,5 @@
 
-Required to run on linux
+Required to run on linx
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 sudo apt-get install libx11-dev
