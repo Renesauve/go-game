@@ -70,19 +70,3 @@ func (inv *Inventory) RemoveItem(itemID int) {
 		}
 	}
 }
-
-func NewBattleAxe(x, y float64) Weapon {
-	return Weapon{
-		Item: Item{
-			ID:          2, // Assuming 2 is the ID for Battle Axe
-			Name:        "Battle Axe",
-			Description: "A mighty battle axe that crushes foes with brute force.",
-			GFX:         "../../assets/images/battle_axe_001.png", // Replace with actual path
-			X:           x,
-			Y:           y,
-		},
-		Damage:     5,
-		Speed:      1,
-		Handedness: "two-handed",
-	}
-}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"go-game/packages/config"
 	"go-game/packages/game"
 	"go-game/packages/xmlparser"
 	"log"
@@ -14,9 +13,8 @@ func main() {
 	xmlparser.ParseItemsXML("assets/gfx/items.xml")
 
 	gameInstance := game.NewGame()
-
 	// Set up Ebiten window properties using constants from config package
-	ebiten.SetWindowSize(config.ScreenWidth, config.ScreenHeight)
+	ebiten.SetWindowSize(gameInstance.ViewportConfig.ScreenWidth, gameInstance.ViewportConfig.ScreenHeight)
 	ebiten.SetWindowTitle("Cool New Game")
 
 	// Start the game

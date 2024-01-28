@@ -1,7 +1,6 @@
 package player
 
 import (
-	"go-game/packages/config"
 	"go-game/packages/items"
 )
 
@@ -33,29 +32,4 @@ func NewPlayer(x, y float64, coordinates [2]int) Player {
 		Y:           y,
 		Coordinates: [2]int{coordinates[0], coordinates[1]},
 	}
-}
-
-func (p *Player) StartingPositionInNewRoom(direction Direction) (float64, float64) {
-	var newX, newY float64
-
-	switch direction {
-	case DirectionRight:
-		// Start at the left edge of the new room
-		newX = 0
-		newY = p.Y // Keep the vertical position the same
-	case DirectionLeft:
-		// Start at the right edge of the new room
-		newX = config.ScreenWidth - float64(config.PlayerWidth)
-		newY = p.Y // Keep the vertical position the same
-	case DirectionUp:
-		// Start at the bottom of the new room
-		newX = p.X // Keep the horizontal position the same
-		newY = config.ScreenHeight - float64(config.PlayerHeight)
-	case DirectionDown:
-		// Start at the top of the new room
-		newX = p.X // Keep the horizontal position the same
-		newY = 0
-	}
-
-	return newX, newY
 }

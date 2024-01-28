@@ -1,20 +1,59 @@
 package config
 
 const (
-	ScreenWidth               = 1920
-	ScreenHeight              = 1080
-	PlayerWidth               = 24
-	PlayerHeight              = 24
-	MinimapRoomSize           = 30
-	MinimapPadding            = 15
-	GridSize                  = 5
-	Speed                     = 15.0
-	ItemWidth                 = 1040
-	ItemHeight                = 1040
+	GridSize = 5
+
+	//PLAYER
+	PlayerWidth  = 24
+	PlayerHeight = 24
+	Speed        = 15.0
+
+	//MINIMAP
+
+	MinimapPadding = 15
+
+	//ITEMS
+	ItemWidth        = 1040
+	ItemHeight       = 1040
+	MaxMinimapWidth  = 150 // Maximum width for the minimap
+	MaxMinimapHeight = 150 // Maximum height for the minimap
+	//INVENTORY
 	InventoryBackgroundWidth  = 400
-	InventoryBackgroundHeight = 300
-	InventoryItemSize         = 48  // Size of each item icon
-	InventoryItemPadding      = 10  // Space between items
-	InventoryStartX           = 100 // Starting X position for the inventory
-	InventoryStartY           = 100 // Starting Y position for the inventory
+	InventoryBackgroundHeight = 200
+	InventoryItemSize         = 48 // Size of each item icon
+	InventoryItemPadding      = 50 // Space between items
+	InventoryStartX           = 0  // Starting X position for the inventory
+	InventoryStartY           = 0  // Starting Y position for the inventory
 )
+
+var (
+	MinimapRoomSize = calculateMinimapRoomSize(GridSize)
+	MinimapWidth    = GridSize * MinimapRoomSize
+	MinimapHeight   = GridSize * MinimapRoomSize
+)
+
+type GameViewportConfig struct {
+	ScreenWidth  int
+	ScreenHeight int
+	// other viewport-related fields
+}
+
+func (c *GameViewportConfig) UpdateScreenSize(width, height int) {
+	c.ScreenWidth = width
+	c.ScreenHeight = height
+}
+
+func calculateMinimapRoomSize(gridSize int) int {
+	roomSizeWidth := MaxMinimapWidth / gridSize
+	roomSizeHeight := MaxMinimapHeight / gridSize
+	return min(roomSizeWidth, roomSizeHeight) // Use the smaller of the two to ensure it fits
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// Usage:

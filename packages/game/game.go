@@ -1,11 +1,11 @@
 package game
 
 import (
+	"fmt"
 	"go-game/packages/config"
 	"go-game/packages/items"
 	"go-game/packages/player"
 	"go-game/packages/utils"
-	"image"
 	"log"
 
 	"go-game/packages/room"
@@ -27,50 +27,64 @@ const (
 
 type GameState int
 type Game struct {
-	Player           player.Player
-	CurrentRoom      *room.Room
-	RoomsVisited     [config.GridSize][config.GridSize]bool
-	Rooms            map[string]*room.Room // A map to hold the rooms
-	RoomGrid         [config.GridSize][config.GridSize]*room.Room
-	State            GameState // Start at the main menu
-	RoomManager      *room.RoomManager
-	InventoryOpen    bool // Add this field
-	previousIPressed bool // Add this field
+	Player                   player.Player
+	CurrentRoom              *room.Room
+	RoomsVisited             [config.GridSize][config.GridSize]bool
+	Rooms                    map[string]*room.Room // A map to hold the rooms
+	RoomGrid                 [config.GridSize][config.GridSize]*room.Room
+	State                    GameState // Start at the main menu
+	RoomManager              *room.RoomManager
+	ViewportConfig           config.GameViewportConfig
+	previousIPressed         bool          // Add this field
+	previousMPressed         bool          // Add this field
+	InventoryOpen            bool          // Add this field
+	InventoryBackgroundImage *ebiten.Image // Add this field
+	MinimapOpen              bool          // Add this field
+	MinimapImage             *ebiten.Image // Add this field
+
 }
 
 func NewGame() *Game {
+
+	viewportConfig := config.GameViewportConfig{
+		ScreenWidth:  1024, // Default width, or use ebiten.WindowSize() if window is already created
+		ScreenHeight: 768,  // Default height
+	}
+
 	gridMiddleX, gridMiddleY := 2, 2
 
 	// Calculate screen position from grid position
-	screenMiddleX := float64(gridMiddleX)*(float64(config.ScreenWidth)/float64(config.GridSize)) + (float64(config.ScreenWidth) / float64(config.GridSize) / 2.0) - float64(config.PlayerWidth)/2.0
-	screenMiddleY := float64(gridMiddleY)*(float64(config.ScreenHeight)/float64(config.GridSize)) + (float64(config.ScreenHeight) / float64(config.GridSize) / 2.0) - float64(config.PlayerHeight)/2.0
+	screenMiddleX := float64(gridMiddleX)*(float64(viewportConfig.ScreenWidth)/float64(config.GridSize)) +
+		(float64(viewportConfig.ScreenWidth) / float64(config.GridSize) / 2.0) -
+		float64(config.PlayerWidth)/2.0
 
-	p := player.NewPlayer(screenMiddleX, screenMiddleY, [2]int{config.GridSize / 2, config.GridSize / 2})
+	screenMiddleY := float64(gridMiddleY)*(float64(viewportConfig.ScreenHeight)/float64(config.GridSize)) +
+		(float64(viewportConfig.ScreenHeight) / float64(config.GridSize) / 2.0) -
+		float64(config.PlayerHeight)/2.0
+	p := player.NewPlayer(screenMiddleX, screenMiddleY, [2]int{gridMiddleX, gridMiddleY})
 	roomGrid := [config.GridSize][config.GridSize]*room.Room{}
 
 	g := &Game{
-		Player:       p,
-		Rooms:        make(map[string]*room.Room),
-		RoomsVisited: [config.GridSize][config.GridSize]bool{},
-		RoomGrid:     roomGrid,
-		State:        MainMenu, // Start at the main menu
-		RoomManager:  room.NewRoomManager(),
-		CurrentRoom:  nil,
+		ViewportConfig: viewportConfig,
+		Player:         p,
+		Rooms:          make(map[string]*room.Room),
+		RoomsVisited:   [config.GridSize][config.GridSize]bool{},
+		RoomGrid:       roomGrid,
+		State:          MainMenu, // Start at the main menu
+		RoomManager:    room.NewRoomManager(),
+		CurrentRoom:    nil,
 	}
 
 	initialRoom := g.RoomManager.RoomGrid[gridMiddleX][gridMiddleY]
-	battleAxe := items.NewBattleAxe(100, 200)
-	initialRoom.Items = append(initialRoom.Items, battleAxe)
-	if initialRoom != nil {
-		initialRoom.Items = append(initialRoom.Items, battleAxe)
-	}
 
 	g.CurrentRoom = initialRoom
-
+	fmt.Println(g.CurrentRoom.RoomType)
 	return g
 }
 
 func (g *Game) Update() error {
+	screenWidth, screenHeight := ebiten.WindowSize()
+	g.ViewportConfig.UpdateScreenSize(screenWidth, screenHeight)
 
 	g.handlePlayerMovement()
 
@@ -98,41 +112,19 @@ func (g *Game) Update() error {
 	} else {
 		g.previousIPressed = false
 	}
+	if ebiten.IsKeyPressed(ebiten.KeyM) {
+		if !g.previousMPressed {
+			g.MinimapOpen = !g.MinimapOpen
+			g.previousMPressed = true
+		}
+	} else {
+		g.previousMPressed = false
+	}
 
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-
-	minimapStartX := config.ScreenWidth - config.GridSize*config.MinimapRoomSize - config.MinimapPadding
-	minimapStartY := config.ScreenHeight - config.GridSize*config.MinimapRoomSize - config.MinimapPadding
-	if g.InventoryOpen {
-		g.DrawInventory(screen)
-	}
-	for x := 0; x < config.GridSize; x++ {
-		for y := 0; y < config.GridSize; y++ {
-			var roomColor color.Color
-
-			// Determine room color
-			if g.RoomsVisited[x][y] {
-				roomColor = color.Gray{Y: 150} // Visited room color
-			} else {
-				roomColor = color.Gray{Y: 50} // Unvisited room color
-			}
-
-			// Highlight the current room
-			if x == g.Player.Coordinates[0] && y == g.Player.Coordinates[1] {
-				roomColor = color.RGBA{R: 255, G: 0, B: 0, A: 255} // Current room color
-			}
-
-			// Calculate the position of each room in the minimap
-			minimapX := minimapStartX + x*config.MinimapRoomSize
-			minimapY := minimapStartY + y*config.MinimapRoomSize
-
-			// Draw the room on the minimap
-			vector.DrawFilledRect(screen, float32(minimapX), float32(minimapY), float32(config.MinimapRoomSize), float32(config.MinimapRoomSize), roomColor, true)
-		}
-	}
 
 	vector.DrawFilledRect(screen, float32(g.Player.X), float32(g.Player.Y), config.PlayerWidth, config.PlayerHeight, color.White, false)
 
@@ -155,18 +147,25 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			screen.DrawImage(itemImage, op)
 		}
 	}
+
+	if g.InventoryOpen {
+		g.drawInventory(screen)
+	}
+	if g.MinimapOpen {
+		g.drawMinimap(screen)
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	// For simplicity, let's return the outside size; you can adjust as needed for your game
-	return outsideWidth, outsideHeight
+	return g.ViewportConfig.ScreenWidth, g.ViewportConfig.ScreenHeight
 }
 
-func (g *Game) handlePlayerMovement() (float64, float64) {
+func (g *Game) handlePlayerMovement() {
 	proposedX, proposedY := g.Player.X, g.Player.Y
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
 		proposedX += config.Speed
-		if proposedX > config.ScreenWidth-float64(config.PlayerWidth) && g.Player.Coordinates[0] < config.GridSize-1 {
+		if proposedX > float64(g.ViewportConfig.ScreenWidth)-float64(config.PlayerWidth) && g.Player.Coordinates[0] < config.GridSize-1 {
 			newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionRight)
 			if newRoom != nil {
 				g.CurrentRoom = newRoom
@@ -175,6 +174,7 @@ func (g *Game) handlePlayerMovement() (float64, float64) {
 			}
 		}
 	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
 		proposedX -= config.Speed
 		if proposedX < 0 && g.Player.Coordinates[0] > 0 {
@@ -182,7 +182,7 @@ func (g *Game) handlePlayerMovement() (float64, float64) {
 			if newRoom != nil {
 				g.CurrentRoom = newRoom
 				g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
-				proposedX = config.ScreenWidth - float64(config.PlayerWidth) // Start at the right edge of the new room
+				proposedX = float64(g.ViewportConfig.ScreenWidth) - float64(config.PlayerWidth) // Start at the right edge of the new room
 			}
 		}
 	}
@@ -194,14 +194,14 @@ func (g *Game) handlePlayerMovement() (float64, float64) {
 			if newRoom != nil {
 				g.CurrentRoom = newRoom
 				g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
-				proposedY = config.ScreenHeight - float64(config.PlayerHeight) // Start at the bottom of the new room
+				proposedY = float64(g.ViewportConfig.ScreenHeight) - float64(config.PlayerHeight) // Start at the bottom of the new room
 			}
 		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
 		proposedY += config.Speed
-		if proposedY > config.ScreenHeight-float64(config.PlayerHeight) && g.Player.Coordinates[1] < config.GridSize-1 {
+		if proposedY > float64(g.ViewportConfig.ScreenHeight)-float64(config.PlayerHeight) && g.Player.Coordinates[1] < config.GridSize-1 {
 			newRoom, newX, newY := g.RoomManager.GetRoomInDirection(g.Player.Coordinates[0], g.Player.Coordinates[1], player.DirectionDown)
 			if newRoom != nil {
 				g.CurrentRoom = newRoom
@@ -211,12 +211,11 @@ func (g *Game) handlePlayerMovement() (float64, float64) {
 		}
 	}
 
-	if proposedX >= 0 && proposedX <= config.ScreenWidth-float64(config.PlayerWidth) &&
-		proposedY >= 0 && proposedY <= config.ScreenHeight-float64(config.PlayerHeight) {
+	// Ensure the player stays within the current viewport dimensions
+	if proposedX >= 0 && proposedX <= float64(g.ViewportConfig.ScreenWidth)-float64(config.PlayerWidth) &&
+		proposedY >= 0 && proposedY <= float64(g.ViewportConfig.ScreenHeight)-float64(config.PlayerHeight) {
 		g.Player.X, g.Player.Y = proposedX, proposedY
 	}
-	return proposedX, proposedY
-
 }
 
 func (g *Game) playerIsOverItem() (items.Itemizable, int) {
@@ -233,35 +232,87 @@ func (g *Game) playerIsOverItem() (items.Itemizable, int) {
 	return nil, -1 // No item is under the player, return -1 as the index
 }
 
-func (g *Game) DrawInventory(screen *ebiten.Image) {
+func (g *Game) drawInventory(screen *ebiten.Image) {
+	// Instead of getting bounds every time, use the stored screen dimensions from the viewport config
+	screenWidth, screenHeight := g.ViewportConfig.ScreenWidth, g.ViewportConfig.ScreenHeight
 
-	invBackground := image.Rect(0, 0, config.InventoryBackgroundWidth, config.InventoryBackgroundHeight)
-	invBackgroundImg := ebiten.NewImageFromImage(image.NewRGBA(invBackground))
-	invBackgroundImg.Fill(color.RGBA{R: 0, G: 0, B: 0, A: 180}) // Semi-transparent black background
+	// Calculate the starting X and Y coordinates for the inventory
+	inventoryStartX := float64(screenWidth - config.InventoryBackgroundWidth)
+	inventoryStartY := float64(screenHeight - config.InventoryBackgroundHeight)
 
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(config.InventoryStartX, config.InventoryStartY)
-	screen.DrawImage(invBackgroundImg, op)
+	// Use a single draw image options for the entire inventory drawing for efficiency
+	invOp := &ebiten.DrawImageOptions{}
+	invOp.GeoM.Translate(inventoryStartX, inventoryStartY)
+
+	// Draw the inventory background
+	// It's more efficient to create a single background image and reuse it rather than creating a new one each frame
+	if g.InventoryBackgroundImage == nil {
+		g.InventoryBackgroundImage = ebiten.NewImage(config.InventoryBackgroundWidth, config.InventoryBackgroundHeight)
+		g.InventoryBackgroundImage.Fill(color.RGBA{R: 210, G: 180, B: 140, A: 255}) // Adjust alpha for desired transparency
+	}
+	screen.DrawImage(g.InventoryBackgroundImage, invOp)
 
 	// Draw each item in the inventory
 	for i, item := range g.Player.Inventory.Items {
-		// Calculate item position
-		x := float64(i%4)*(config.InventoryItemSize+config.InventoryItemPadding) + config.InventoryStartX + config.InventoryItemPadding
-		y := float64(i/4)*(config.InventoryItemSize+config.InventoryItemPadding) + config.InventoryStartY + config.InventoryItemPadding
-
-		// Load the item image
 		itemImage, err := utils.LoadImage(item.GetGFX())
 		if err != nil {
 			log.Printf("Failed to load item image: %v", err)
 			continue
 		}
 
-		// Draw the item
+		// Calculate item position
+		x := float64(i%4)*(config.InventoryItemSize+config.InventoryItemPadding) + config.InventoryItemPadding
+		y := float64(i/4)*(config.InventoryItemSize+config.InventoryItemPadding) + config.InventoryItemPadding
+
+		// Reuse the existing draw options for efficiency by resetting and translating for each item
 		itemOp := &ebiten.DrawImageOptions{}
-		itemOp.GeoM.Translate(x, y)
+		itemOp.GeoM.Translate(inventoryStartX+x, inventoryStartY+y)
 		itemOp.GeoM.Scale(config.InventoryItemSize/float64(itemImage.Bounds().Dx()), config.InventoryItemSize/float64(itemImage.Bounds().Dy())) // Scale the image to fit the item size
 		screen.DrawImage(itemImage, itemOp)
 	}
+}
+
+func (g *Game) drawMinimap(screen *ebiten.Image) {
+	// Create the minimap image once if it doesn't exist
+	if g.MinimapImage == nil {
+		g.MinimapImage = ebiten.NewImage(config.MinimapWidth, config.MinimapHeight)
+	}
+
+	// Clear the minimap image to start fresh each frame
+	g.MinimapImage.Clear()
+
+	// Drawing logic for the minimap
+	for x := 0; x < config.GridSize; x++ {
+		for y := 0; y < config.GridSize; y++ {
+			var roomColor color.Color
+
+			// Determine room color
+			if g.RoomsVisited[x][y] {
+				roomColor = color.Gray{Y: 150} // Visited room color
+			} else {
+				roomColor = color.Gray{Y: 50} // Unvisited room color
+			}
+
+			// Highlight the current room
+			if x == g.Player.Coordinates[0] && y == g.Player.Coordinates[1] {
+				roomColor = color.RGBA{R: 255, G: 0, B: 0, A: 255} // Current room color
+			}
+
+			// Calculate the position of each room in the minimap
+			minimapX := x * config.MinimapRoomSize
+			minimapY := y * config.MinimapRoomSize
+
+			// Draw the room on the minimap image
+			vector.DrawFilledRect(g.MinimapImage, float32(minimapX), float32(minimapY), float32(config.MinimapRoomSize), float32(config.MinimapRoomSize), roomColor, true)
+		}
+	}
+
+	// Draw the minimap image onto the screen
+	minimapOp := &ebiten.DrawImageOptions{}
+	minimapStartX := g.ViewportConfig.ScreenWidth - config.MinimapWidth - config.MinimapPadding
+	minimapStartY := config.MinimapPadding
+	minimapOp.GeoM.Translate(float64(minimapStartX), float64(minimapStartY))
+	screen.DrawImage(g.MinimapImage, minimapOp)
 }
 
 // GetRoomStartPosition returns the top-left position of the room on the screen

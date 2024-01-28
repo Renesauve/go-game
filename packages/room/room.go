@@ -1,9 +1,11 @@
 package room
 
 import (
+	"fmt"
 	"go-game/packages/config"
 	"go-game/packages/items"
 	"go-game/packages/player"
+	"math/rand"
 	// other necessary imports
 )
 
@@ -64,26 +66,60 @@ func (rm *RoomManager) GetRoomInDirection(currentX, currentY int, direction play
 }
 
 func (rm *RoomManager) GenerateRooms() {
-	// Assuming the center of the grid is always a regular room
-	startX, startY := config.GridSize/2, config.GridSize/2
-	rm.RoomGrid[startX][startY] = &Room{RoomType: RegularRoom}
 
-	// Iterate through the grid and generate rooms
+	// Place the boss room randomly on an edge
+	bossRoomX, bossRoomY := randomEdgePosition(config.GridSize)
+	rm.RoomGrid[bossRoomX][bossRoomY] = &Room{RoomType: BossRoom}
+
+	// Determine the number of item rooms based on gridSize
+	numItemRooms := calculateNumberOfItemRooms(config.GridSize)
+
+	// Place item rooms
+	for i := 0; i < numItemRooms; i++ {
+		var itemRoomX, itemRoomY int
+		for {
+
+			itemRoomX, itemRoomY = rand.Intn(config.GridSize), rand.Intn(config.GridSize)
+			// Ensure the item room is not in the center, not on the boss room, and not overlapping another item room
+			if !(itemRoomX == config.GridSize/2 && itemRoomY == config.GridSize/2) &&
+				!(itemRoomX == bossRoomX && itemRoomY == bossRoomY) &&
+				rm.RoomGrid[itemRoomX][itemRoomY] == nil {
+				fmt.Println("itemRoomX", itemRoomX, "itemRoomY", itemRoomY)
+				fmt.Println("bossRoomX", bossRoomX, "bossRoomY", bossRoomY)
+
+				break
+			}
+		}
+		rm.RoomGrid[itemRoomX][itemRoomY] = &Room{RoomType: ItemRoom}
+	}
+
+	// Fill the remaining grid with regular rooms
 	for x := 0; x < config.GridSize; x++ {
 		for y := 0; y < config.GridSize; y++ {
-			// Skip if room is already initialized
-			if rm.RoomGrid[x][y] != nil {
-				continue
-			}
-
-			// Determine the room type based on the positions
-			roomType := RegularRoom
-
-			// Create the new room and assign it to the grid
-			rm.RoomGrid[x][y] = &Room{
-				RoomType: roomType,
+			if rm.RoomGrid[x][y] == nil {
+				rm.RoomGrid[x][y] = &Room{RoomType: RegularRoom}
 			}
 		}
 	}
+}
 
+func randomEdgePosition(gridSize int) (int, int) {
+	edge := rand.Intn(4)
+	var x, y int
+	switch edge {
+	case 0: // Top edge
+		x, y = rand.Intn(gridSize), 0
+	case 1: // Bottom edge
+		x, y = rand.Intn(gridSize), gridSize-1
+	case 2: // Left edge
+		x, y = 0, rand.Intn(gridSize)
+	case 3: // Right edge
+		x, y = gridSize-1, rand.Intn(gridSize)
+	}
+	return x, y
+}
+
+func calculateNumberOfItemRooms(gridSize int) int {
+	// Example calculation, adjust as needed
+	return gridSize / 2 // Half the gridSize, for example
 }
