@@ -38,6 +38,7 @@ type GameViewportConfig struct {
 	// other viewport-related fields
 }
 
+// need to set a maximum screen size and have all viewport in the center of the screen
 func (c *GameViewportConfig) UpdateScreenSize(width, height int) {
 	c.ScreenWidth = width
 	c.ScreenHeight = height

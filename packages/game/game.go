@@ -84,9 +84,9 @@ func NewGame() *Game {
 
 func (g *Game) Update() error {
 	screenWidth, screenHeight := ebiten.WindowSize()
-	g.ViewportConfig.UpdateScreenSize(screenWidth, screenHeight)
 
-	g.handlePlayerMovement()
+	go g.ViewportConfig.UpdateScreenSize(screenWidth, screenHeight)
+	go g.handlePlayerMovement()
 
 	g.RoomsVisited[g.Player.Coordinates[0]][g.Player.Coordinates[1]] = true
 
