@@ -1,8 +1,9 @@
 package config
 
 const (
-	GridSize = 5
-
+	GridSize        = 2
+	MaxScreenWidth  = 1920
+	MaxScreenHeight = 1080
 	//PLAYER
 	PlayerWidth  = 24
 	PlayerHeight = 24
@@ -13,8 +14,7 @@ const (
 	MinimapPadding = 15
 
 	//ITEMS
-	ItemWidth        = 1040
-	ItemHeight       = 1040
+
 	MaxMinimapWidth  = 150 // Maximum width for the minimap
 	MaxMinimapHeight = 150 // Maximum height for the minimap
 	//INVENTORY
@@ -35,11 +35,25 @@ var (
 type GameViewportConfig struct {
 	ScreenWidth  int
 	ScreenHeight int
+	OffsetX      int // Horizontal offset for centering
+	OffsetY      int // Vertical offset for centering
 	// other viewport-related fields
 }
 
 // need to set a maximum screen size and have all viewport in the center of the screen
 func (c *GameViewportConfig) UpdateScreenSize(width, height int) {
+	// Ensure the width and height do not exceed the maximum
+	if width > MaxScreenWidth {
+		width = MaxScreenWidth
+	}
+	if height > MaxScreenHeight {
+		height = MaxScreenHeight
+	}
+
+	// Calculate the offsets for centering
+	c.OffsetX = (MaxScreenWidth - width) / 2
+	c.OffsetY = (MaxScreenHeight - height) / 2
+
 	c.ScreenWidth = width
 	c.ScreenHeight = height
 }

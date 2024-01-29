@@ -23,7 +23,7 @@ func LoadImage(filename string) (*ebiten.Image, error) {
 	}
 
 	// Load the image file. The path should be adjusted based on your project structure.
-	img, _, err := ebitenutil.NewImageFromFile("assets/gfx/" + filename)
+	img, _, err := ebitenutil.NewImageFromFile("assets/images/" + filename)
 	if err != nil {
 		return nil, err
 	}

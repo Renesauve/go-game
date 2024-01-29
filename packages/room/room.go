@@ -33,11 +33,11 @@ type RoomManager struct {
 
 // Obstacle represents an obstacle within a room.
 
-func NewRoomManager() *RoomManager {
+func NewRoomManager(allItems []items.Itemizable) *RoomManager {
 	rm := &RoomManager{
 		Rooms: make([][config.GridSize]*Room, config.GridSize),
 	}
-	rm.GenerateRooms() // Method to generate rooms
+	rm.GenerateRooms(allItems) // Method to generate rooms
 	return rm
 }
 
@@ -65,32 +65,33 @@ func (rm *RoomManager) GetRoomInDirection(currentX, currentY int, direction play
 	return nil, currentX, currentY
 }
 
-func (rm *RoomManager) GenerateRooms() {
+func (rm *RoomManager) GenerateRooms(allItems []items.Itemizable) {
+	shuffleItems(allItems)
+	fmt.Println("allItems:", allItems)
+	itemSpawnCount := make(map[items.Itemizable]int)
 
-	// Place the boss room randomly on an edge
 	bossRoomX, bossRoomY := randomEdgePosition(config.GridSize)
 	rm.RoomGrid[bossRoomX][bossRoomY] = &Room{RoomType: BossRoom}
 
-	// Determine the number of item rooms based on gridSize
+	fmt.Println("Boss Room generated at:", bossRoomX, bossRoomY)
+
 	numItemRooms := calculateNumberOfItemRooms(config.GridSize)
-
-	// Place item rooms
+	fmt.Println("Number of Item Rooms to generate:", numItemRooms)
 	for i := 0; i < numItemRooms; i++ {
-		var itemRoomX, itemRoomY int
-		for {
+		itemRoomX, itemRoomY := randomPosition(config.GridSize, bossRoomX, bossRoomY, rm.RoomGrid)
+		fmt.Println("itemRoomX, itemRoomY:", itemRoomX, itemRoomY)
 
-			itemRoomX, itemRoomY = rand.Intn(config.GridSize), rand.Intn(config.GridSize)
-			// Ensure the item room is not in the center, not on the boss room, and not overlapping another item room
-			if !(itemRoomX == config.GridSize/2 && itemRoomY == config.GridSize/2) &&
-				!(itemRoomX == bossRoomX && itemRoomY == bossRoomY) &&
-				rm.RoomGrid[itemRoomX][itemRoomY] == nil {
-				fmt.Println("itemRoomX", itemRoomX, "itemRoomY", itemRoomY)
-				fmt.Println("bossRoomX", bossRoomX, "bossRoomY", bossRoomY)
-
+		for _, item := range allItems {
+			if itemSpawnCount[item] < 2 {
+				rm.RoomGrid[itemRoomX][itemRoomY] = &Room{
+					RoomType: ItemRoom,
+					Items:    []items.Itemizable{item},
+				}
+				itemSpawnCount[item]++
+				fmt.Printf("Item Room with item '%s' generated at: %d, %d\n", item.GetName(), itemRoomX, itemRoomY)
 				break
 			}
 		}
-		rm.RoomGrid[itemRoomX][itemRoomY] = &Room{RoomType: ItemRoom}
 	}
 
 	// Fill the remaining grid with regular rooms
@@ -98,9 +99,11 @@ func (rm *RoomManager) GenerateRooms() {
 		for y := 0; y < config.GridSize; y++ {
 			if rm.RoomGrid[x][y] == nil {
 				rm.RoomGrid[x][y] = &Room{RoomType: RegularRoom}
+				fmt.Println("Regular Room generated at:", x, y)
 			}
 		}
 	}
+
 }
 
 func randomEdgePosition(gridSize int) (int, int) {
@@ -122,4 +125,21 @@ func randomEdgePosition(gridSize int) (int, int) {
 func calculateNumberOfItemRooms(gridSize int) int {
 	// Example calculation, adjust as needed
 	return gridSize / 2 // Half the gridSize, for example
+}
+
+func shuffleItems(items []items.Itemizable) {
+	rand.Shuffle(len(items), func(i, j int) {
+		items[i], items[j] = items[j], items[i]
+	})
+}
+
+func randomPosition(gridSize, excludeX, excludeY int, grid [config.GridSize][config.GridSize]*Room) (int, int) {
+	var x, y int
+	for {
+		x, y = rand.Intn(gridSize), rand.Intn(gridSize)
+		if (x != excludeX || y != excludeY) && grid[x][y] == nil {
+			break
+		}
+	}
+	return x, y
 }

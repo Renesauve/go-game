@@ -1,11 +1,11 @@
 package game
 
 import (
-	"fmt"
 	"go-game/packages/config"
 	"go-game/packages/items"
 	"go-game/packages/player"
 	"go-game/packages/utils"
+	"image"
 	"log"
 
 	"go-game/packages/room"
@@ -44,14 +44,14 @@ type Game struct {
 
 }
 
-func NewGame() *Game {
+func NewGame(allItems []items.Itemizable) *Game {
 
 	viewportConfig := config.GameViewportConfig{
-		ScreenWidth:  1024, // Default width, or use ebiten.WindowSize() if window is already created
-		ScreenHeight: 768,  // Default height
+		ScreenWidth:  1920, // Default width, or use ebiten.WindowSize() if window is already created
+		ScreenHeight: 1080, // Default height
 	}
 
-	gridMiddleX, gridMiddleY := 2, 2
+	gridMiddleX, gridMiddleY := config.GridSize/2, config.GridSize/2
 
 	// Calculate screen position from grid position
 	screenMiddleX := float64(gridMiddleX)*(float64(viewportConfig.ScreenWidth)/float64(config.GridSize)) +
@@ -71,25 +71,25 @@ func NewGame() *Game {
 		RoomsVisited:   [config.GridSize][config.GridSize]bool{},
 		RoomGrid:       roomGrid,
 		State:          MainMenu, // Start at the main menu
-		RoomManager:    room.NewRoomManager(),
+		RoomManager:    room.NewRoomManager(allItems),
 		CurrentRoom:    nil,
 	}
 
 	initialRoom := g.RoomManager.RoomGrid[gridMiddleX][gridMiddleY]
 
 	g.CurrentRoom = initialRoom
-	fmt.Println(g.CurrentRoom.RoomType)
+
 	return g
 }
 
 func (g *Game) Update() error {
 	screenWidth, screenHeight := ebiten.WindowSize()
 
-	go g.ViewportConfig.UpdateScreenSize(screenWidth, screenHeight)
-	go g.handlePlayerMovement()
+	g.ViewportConfig.UpdateScreenSize(screenWidth, screenHeight)
+	g.handlePlayerMovement()
 
 	g.RoomsVisited[g.Player.Coordinates[0]][g.Player.Coordinates[1]] = true
-
+	// fmt.Println(g.CurrentRoom.Items)
 	if g.CurrentRoom != nil {
 		item, index := g.playerIsOverItem()
 
@@ -128,7 +128,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	vector.DrawFilledRect(screen, float32(g.Player.X), float32(g.Player.Y), config.PlayerWidth, config.PlayerHeight, color.White, false)
 
-	if g.CurrentRoom != nil {
+	if g.CurrentRoom != nil && g.CurrentRoom.RoomType == room.ItemRoom {
 		for _, item := range g.CurrentRoom.Items {
 			gfxPath := item.GetGFX()
 			itemImage, err := utils.LoadImage(gfxPath)
@@ -137,13 +137,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				continue
 			}
 
-			// Use item's coordinates directly
-			x, y := item.GetX(), item.GetY()
-
-			// scale
+			// Calculate the position to draw the item in the center of the screen
+			screenWidth := float64(g.ViewportConfig.ScreenWidth)
+			screenHeight := float64(g.ViewportConfig.ScreenHeight)
+			itemX := (screenWidth - float64(itemImage.Bounds().Dx())) / 2
+			itemY := (screenHeight - float64(itemImage.Bounds().Dy())) / 2
 
 			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(x, y)
+			op.GeoM.Translate(itemX, itemY)
 			screen.DrawImage(itemImage, op)
 		}
 	}
@@ -154,6 +155,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.MinimapOpen {
 		g.drawMinimap(screen)
 	}
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -220,16 +222,28 @@ func (g *Game) handlePlayerMovement() {
 
 func (g *Game) playerIsOverItem() (items.Itemizable, int) {
 	for index, item := range g.CurrentRoom.Items {
+		// Central position of the item
+		itemX := (float64(g.ViewportConfig.ScreenWidth) - float64(200)) / 2
+		itemY := (float64(g.ViewportConfig.ScreenHeight) - float64(200)) / 2
 
-		if g.Player.X < item.GetX()+config.ItemWidth &&
-			g.Player.X+config.PlayerWidth > item.GetX() &&
-			g.Player.Y < item.GetY()+config.ItemHeight &&
-			g.Player.Y+config.PlayerHeight > item.GetY() {
+		// Define interaction area (assuming item.GetWidth() and item.GetHeight() exist)
+		itemRect := image.Rect(
+			int(itemX), int(itemY),
+			int(itemX)+200, int(itemY)+200,
+		)
 
-			return item, index // Return the item and its index
+		// Player's current position and size
+		playerRect := image.Rect(
+			int(g.Player.X), int(g.Player.Y),
+			int(g.Player.X)+config.PlayerWidth, int(g.Player.Y)+config.PlayerHeight,
+		)
+
+		// Check if player overlaps the item's interaction area
+		if itemRect.Overlaps(playerRect) {
+			return item, index
 		}
 	}
-	return nil, -1 // No item is under the player, return -1 as the index
+	return nil, -1
 }
 
 func (g *Game) drawInventory(screen *ebiten.Image) {
