@@ -1,7 +1,7 @@
 package config
 
 const (
-	GridSize        = 2
+	GridSize        = 5
 	MaxScreenWidth  = 1920
 	MaxScreenHeight = 1080
 	//PLAYER

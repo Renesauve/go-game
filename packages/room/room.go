@@ -54,9 +54,6 @@ func (rm *RoomManager) GetRoomInDirection(currentX, currentY int, direction play
 		nextX++
 	}
 
-	if nextX < 0 || nextX >= config.GridSize || nextY < 0 || nextY >= config.GridSize {
-		return nil, currentX, currentY // Prevent leaving the grid, return nil and current coordinates
-	}
 	if nextRoom := rm.RoomGrid[nextX][nextY]; nextRoom != nil {
 		rm.CurrentRoom = nextRoom
 		return nextRoom, nextX, nextY
@@ -67,7 +64,7 @@ func (rm *RoomManager) GetRoomInDirection(currentX, currentY int, direction play
 
 func (rm *RoomManager) GenerateRooms(allItems []items.Itemizable) {
 	shuffleItems(allItems)
-	fmt.Println("allItems:", allItems)
+
 	itemSpawnCount := make(map[items.Itemizable]int)
 
 	bossRoomX, bossRoomY := randomEdgePosition(config.GridSize)
@@ -79,7 +76,6 @@ func (rm *RoomManager) GenerateRooms(allItems []items.Itemizable) {
 	fmt.Println("Number of Item Rooms to generate:", numItemRooms)
 	for i := 0; i < numItemRooms; i++ {
 		itemRoomX, itemRoomY := randomPosition(config.GridSize, bossRoomX, bossRoomY, rm.RoomGrid)
-		fmt.Println("itemRoomX, itemRoomY:", itemRoomX, itemRoomY)
 
 		for _, item := range allItems {
 			if itemSpawnCount[item] < 2 {

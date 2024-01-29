@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"go-game/packages/game"
 	"go-game/packages/items"
 	"go-game/packages/xmlparser"
@@ -25,7 +24,7 @@ func main() {
 	for _, armor := range itemsList.Armors {
 		allItems = append(allItems, armor)
 	}
-	fmt.Println(allItems)
+
 	gameInstance := game.NewGame(allItems)
 	// Set up Ebiten window properties using constants from config package
 	ebiten.SetWindowSize(gameInstance.ViewportConfig.ScreenWidth, gameInstance.ViewportConfig.ScreenHeight)

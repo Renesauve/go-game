@@ -7,6 +7,7 @@ import (
 	"go-game/packages/utils"
 	"image"
 	"log"
+	"math"
 
 	"go-game/packages/room"
 	"image/color"
@@ -41,7 +42,7 @@ type Game struct {
 	InventoryBackgroundImage *ebiten.Image // Add this field
 	MinimapOpen              bool          // Add this field
 	MinimapImage             *ebiten.Image // Add this field
-
+	WallSpriteImage          *ebiten.Image
 }
 
 func NewGame(allItems []items.Itemizable) *Game {
@@ -74,6 +75,11 @@ func NewGame(allItems []items.Itemizable) *Game {
 		RoomManager:    room.NewRoomManager(allItems),
 		CurrentRoom:    nil,
 	}
+	wallSprite, err := utils.LoadImage("wallsprite.png")
+	if err != nil {
+		log.Fatalf("Failed to load wall sprite: %v", err)
+	}
+	g.WallSpriteImage = wallSprite
 
 	initialRoom := g.RoomManager.RoomGrid[gridMiddleX][gridMiddleY]
 
@@ -127,7 +133,7 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 
 	vector.DrawFilledRect(screen, float32(g.Player.X), float32(g.Player.Y), config.PlayerWidth, config.PlayerHeight, color.White, false)
-
+	g.drawWalls(screen)
 	if g.CurrentRoom != nil && g.CurrentRoom.RoomType == room.ItemRoom {
 		for _, item := range g.CurrentRoom.Items {
 			gfxPath := item.GetGFX()
@@ -174,6 +180,7 @@ func (g *Game) handlePlayerMovement() {
 				g.Player.Coordinates[0], g.Player.Coordinates[1] = newX, newY
 				proposedX = 0 // Reset to left edge of the new room
 			}
+
 		}
 	}
 
@@ -212,12 +219,37 @@ func (g *Game) handlePlayerMovement() {
 			}
 		}
 	}
+	wallWidth := 100 // adjust to your wall sprite size
+	minX, maxX, minY, maxY := 0.0, float64(g.ViewportConfig.ScreenWidth)-float64(config.PlayerWidth), 0.0, float64(g.ViewportConfig.ScreenHeight)-float64(config.PlayerHeight)
 
-	// Ensure the player stays within the current viewport dimensions
-	if proposedX >= 0 && proposedX <= float64(g.ViewportConfig.ScreenWidth)-float64(config.PlayerWidth) &&
-		proposedY >= 0 && proposedY <= float64(g.ViewportConfig.ScreenHeight)-float64(config.PlayerHeight) {
-		g.Player.X, g.Player.Y = proposedX, proposedY
+	// Check if the player is at the edge of the grid
+	if g.Player.Coordinates[0] == 0 { // Left edge
+		minX = float64(wallWidth)
 	}
+	if g.Player.Coordinates[0] == config.GridSize-1 { // Right edge
+		maxX -= float64(wallWidth)
+	}
+	if g.Player.Coordinates[1] == 0 { // Top edge
+		minY = float64(wallWidth)
+	}
+	if g.Player.Coordinates[1] == config.GridSize-1 { // Bottom edge
+		maxY -= float64(wallWidth)
+	}
+
+	// Adjust proposedX and proposedY to ensure they don't cross the wall boundaries
+	if proposedX < minX {
+		proposedX = minX
+	} else if proposedX > maxX {
+		proposedX = maxX
+	}
+	if proposedY < minY {
+		proposedY = minY
+	} else if proposedY > maxY {
+		proposedY = maxY
+	}
+
+	// Update the player's position
+	g.Player.X, g.Player.Y = proposedX, proposedY
 }
 
 func (g *Game) playerIsOverItem() (items.Itemizable, int) {
@@ -330,3 +362,55 @@ func (g *Game) drawMinimap(screen *ebiten.Image) {
 }
 
 // GetRoomStartPosition returns the top-left position of the room on the screen
+
+func (g *Game) drawWalls(screen *ebiten.Image) {
+	// Constants for the dimensions of each room and the grid size
+
+	// Variables for the width and height of the wall sprite
+	wallSpriteWidth, wallSpriteHeight := 100, 163
+
+	// Player's current room coordinates
+	playerX, playerY := g.Player.Coordinates[0], g.Player.Coordinates[1]
+
+	// Rotate the sprite by 90 degrees for top and bottom walls
+	rotate90 := ebiten.GeoM{}
+	rotate90.Rotate(math.Pi / 2) // Rotate by 90 degrees
+
+	// Draw top wall if the player is in the first row
+	if playerY == 0 {
+		for x := 0; x < g.ViewportConfig.ScreenWidth; x += wallSpriteHeight { // Notice we use wallSpriteHeight after rotation
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM = rotate90
+			op.GeoM.Translate(float64(x+wallSpriteHeight), 0) // Adjust the position after rotation
+			screen.DrawImage(g.WallSpriteImage, op)
+		}
+	}
+
+	// Draw bottom wall if the player is in the last row
+	if playerY == config.GridSize-1 {
+		for x := 0; x < g.ViewportConfig.ScreenWidth; x += wallSpriteHeight { // Notice we use wallSpriteHeight after rotation
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM = rotate90
+			op.GeoM.Translate(float64(x+wallSpriteHeight), float64(g.ViewportConfig.ScreenHeight-wallSpriteWidth)) // Adjust for sprite width after rotation
+			screen.DrawImage(g.WallSpriteImage, op)
+		}
+	}
+
+	// Draw left wall if the player is in the first column
+	if playerX == 0 {
+		for y := 0; y < g.ViewportConfig.ScreenHeight; y += wallSpriteHeight {
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(0, float64(y))
+			screen.DrawImage(g.WallSpriteImage, op)
+		}
+	}
+
+	// Draw right wall if the player is in the last column
+	if playerX == config.GridSize-1 {
+		for y := 0; y < g.ViewportConfig.ScreenHeight; y += wallSpriteHeight {
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(float64(g.ViewportConfig.ScreenWidth-wallSpriteWidth), float64(y))
+			screen.DrawImage(g.WallSpriteImage, op)
+		}
+	}
+}
