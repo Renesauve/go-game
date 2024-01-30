@@ -7,7 +7,7 @@ const (
 	//PLAYER
 	PlayerWidth  = 24
 	PlayerHeight = 24
-	Speed        = 15.0
+	Speed        = 8.0
 
 	//MINIMAP
 

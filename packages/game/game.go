@@ -43,6 +43,7 @@ type Game struct {
 	MinimapOpen              bool          // Add this field
 	MinimapImage             *ebiten.Image // Add this field
 	WallSpriteImage          *ebiten.Image
+	WallWidth                int
 }
 
 func NewGame(allItems []items.Itemizable) *Game {
@@ -74,6 +75,7 @@ func NewGame(allItems []items.Itemizable) *Game {
 		State:          MainMenu, // Start at the main menu
 		RoomManager:    room.NewRoomManager(allItems),
 		CurrentRoom:    nil,
+		WallWidth:      100, // set the wall dimensions
 	}
 	wallSprite, err := utils.LoadImage("wallsprite.png")
 	if err != nil {
@@ -93,7 +95,7 @@ func (g *Game) Update() error {
 
 	g.ViewportConfig.UpdateScreenSize(screenWidth, screenHeight)
 	g.handlePlayerMovement()
-
+	g.processInput()
 	g.RoomsVisited[g.Player.Coordinates[0]][g.Player.Coordinates[1]] = true
 	// fmt.Println(g.CurrentRoom.Items)
 	if g.CurrentRoom != nil {
@@ -168,6 +170,30 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return g.ViewportConfig.ScreenWidth, g.ViewportConfig.ScreenHeight
 }
 
+func (g *Game) processInput() {
+	if ebiten.IsKeyPressed(ebiten.KeyI) {
+		g.toggleInventory()
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyM) {
+		g.toggleMinimap()
+	}
+	g.handlePlayerMovement()
+}
+
+func (g *Game) toggleInventory() {
+	if !g.previousIPressed {
+		g.InventoryOpen = !g.InventoryOpen
+	}
+	g.previousIPressed = true
+}
+
+func (g *Game) toggleMinimap() {
+	if !g.previousMPressed {
+		g.MinimapOpen = !g.MinimapOpen
+	}
+	g.previousMPressed = true
+}
+
 func (g *Game) handlePlayerMovement() {
 	proposedX, proposedY := g.Player.X, g.Player.Y
 
@@ -219,21 +245,21 @@ func (g *Game) handlePlayerMovement() {
 			}
 		}
 	}
-	wallWidth := 100 // adjust to your wall sprite size
+
 	minX, maxX, minY, maxY := 0.0, float64(g.ViewportConfig.ScreenWidth)-float64(config.PlayerWidth), 0.0, float64(g.ViewportConfig.ScreenHeight)-float64(config.PlayerHeight)
 
 	// Check if the player is at the edge of the grid
 	if g.Player.Coordinates[0] == 0 { // Left edge
-		minX = float64(wallWidth)
+		minX = float64(g.WallWidth)
 	}
 	if g.Player.Coordinates[0] == config.GridSize-1 { // Right edge
-		maxX -= float64(wallWidth)
+		maxX -= float64(g.WallWidth)
 	}
 	if g.Player.Coordinates[1] == 0 { // Top edge
-		minY = float64(wallWidth)
+		minY = float64(g.WallWidth)
 	}
 	if g.Player.Coordinates[1] == config.GridSize-1 { // Bottom edge
-		maxY -= float64(wallWidth)
+		maxY -= float64(g.WallWidth)
 	}
 
 	// Adjust proposedX and proposedY to ensure they don't cross the wall boundaries
