@@ -1,0 +1,27 @@
+# .air.toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main ./cmd/go-game"
+  bin = "./tmp/main"
+  full_bin = ""
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = []
+  exclude_file = []
+  exclude_regex = []
+  include_dir = []
+  delay = 1000
+  stop_on_error = true
+  send_interrupt = false
+  kill_delay = "0s"
+
+[log]
+  time = false
+  level = "debug"
+
+[color]
+  main = "yellow"
+  watcher = "cyan"
+  build = "green"
+  runner = "magenta"

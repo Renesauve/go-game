@@ -3,13 +3,16 @@ package main
 import (
 	"go-game/packages/game"
 	"go-game/packages/items"
+	"go-game/packages/socket"
 	"go-game/packages/xmlparser"
-	"log"
+	"log" // This is the line you need to add
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 func main() {
+
+	go socket.StartWebSocketServer()
 
 	itemsList, err := xmlparser.ParseItemsXML("assets/gfx/items.xml")
 	if err != nil {
@@ -25,7 +28,7 @@ func main() {
 		allItems = append(allItems, armor)
 	}
 
-	gameInstance := game.NewGame(allItems)
+	gameInstance := game.NewGame(allItems) // Pass the first connection from the slice
 	// Set up Ebiten window properties using constants from config package
 	ebiten.SetWindowSize(gameInstance.ViewportConfig.ScreenWidth, gameInstance.ViewportConfig.ScreenHeight)
 	ebiten.SetWindowTitle("Cool New Game")
@@ -34,4 +37,5 @@ func main() {
 	if err := ebiten.RunGame(gameInstance); err != nil {
 		log.Fatal(err)
 	}
+
 }

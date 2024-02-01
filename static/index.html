@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WebSocket Game</title>
+    <script type="text/javascript">
+      var ws;
+
+      function connect() {
+        ws = new WebSocket("ws://localhost:8080/ws");
+
+        ws.onopen = function () {
+          console.log("Connected to WebSocket");
+        };
+
+        ws.onmessage = function (event) {
+          console.log("Received message: " + event.data);
+          // Process incoming messages here
+        };
+
+        ws.onclose = function () {
+          console.log("WebSocket connection closed");
+        };
+      }
+
+      function sendMessage() {
+        const message = {
+          action: "move",
+          direction: "right",
+        };
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(message));
+        } else {
+          console.log("WebSocket is not connected");
+        }
+      }
+    </script>
+  </head>
+  <body onload="connect();">
+    <button onclick="sendMessage(`Player moved right`)">Move Right</button>
+    <!-- Add more controls as needed -->
+  </body>
+</html>

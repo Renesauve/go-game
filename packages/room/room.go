@@ -1,7 +1,6 @@
 package room
 
 import (
-	"fmt"
 	"go-game/packages/config"
 	"go-game/packages/items"
 	"go-game/packages/player"
@@ -70,10 +69,10 @@ func (rm *RoomManager) GenerateRooms(allItems []items.Itemizable) {
 	bossRoomX, bossRoomY := randomEdgePosition(config.GridSize)
 	rm.RoomGrid[bossRoomX][bossRoomY] = &Room{RoomType: BossRoom}
 
-	fmt.Println("Boss Room generated at:", bossRoomX, bossRoomY)
+	// fmt.Println("Boss Room generated at:", bossRoomX, bossRoomY)
 
 	numItemRooms := calculateNumberOfItemRooms(config.GridSize)
-	fmt.Println("Number of Item Rooms to generate:", numItemRooms)
+	// fmt.Println("Number of Item Rooms to generate:", numItemRooms)
 	for i := 0; i < numItemRooms; i++ {
 		itemRoomX, itemRoomY := randomPosition(config.GridSize, bossRoomX, bossRoomY, rm.RoomGrid)
 
@@ -84,7 +83,7 @@ func (rm *RoomManager) GenerateRooms(allItems []items.Itemizable) {
 					Items:    []items.Itemizable{item},
 				}
 				itemSpawnCount[item]++
-				fmt.Printf("Item Room with item '%s' generated at: %d, %d\n", item.GetName(), itemRoomX, itemRoomY)
+				// fmt.Printf("Item Room with item '%s' generated at: %d, %d\n", item.GetName(), itemRoomX, itemRoomY)
 				break
 			}
 		}
@@ -95,7 +94,7 @@ func (rm *RoomManager) GenerateRooms(allItems []items.Itemizable) {
 		for y := 0; y < config.GridSize; y++ {
 			if rm.RoomGrid[x][y] == nil {
 				rm.RoomGrid[x][y] = &Room{RoomType: RegularRoom}
-				fmt.Println("Regular Room generated at:", x, y)
+				// fmt.Println("Regular Room generated at:", x, y)
 			}
 		}
 	}

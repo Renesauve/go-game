@@ -1,9 +1,11 @@
 package game
 
 import (
+	"fmt"
 	"go-game/packages/config"
 	"go-game/packages/items"
 	"go-game/packages/player"
+	"go-game/packages/socket"
 	"go-game/packages/utils"
 	"image"
 	"log"
@@ -76,6 +78,7 @@ func NewGame(allItems []items.Itemizable) *Game {
 		RoomManager:    room.NewRoomManager(allItems),
 		CurrentRoom:    nil,
 		WallWidth:      100, // set the wall dimensions
+
 	}
 	wallSprite, err := utils.LoadImage("wallsprite.png")
 	if err != nil {
@@ -86,11 +89,12 @@ func NewGame(allItems []items.Itemizable) *Game {
 	initialRoom := g.RoomManager.RoomGrid[gridMiddleX][gridMiddleY]
 
 	g.CurrentRoom = initialRoom
-
+	fmt.Print(socket.Clients)
 	return g
 }
 
 func (g *Game) Update() error {
+
 	screenWidth, screenHeight := ebiten.WindowSize()
 
 	g.ViewportConfig.UpdateScreenSize(screenWidth, screenHeight)
@@ -136,6 +140,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	vector.DrawFilledRect(screen, float32(g.Player.X), float32(g.Player.Y), config.PlayerWidth, config.PlayerHeight, color.White, false)
 	g.drawWalls(screen)
+
 	if g.CurrentRoom != nil && g.CurrentRoom.RoomType == room.ItemRoom {
 		for _, item := range g.CurrentRoom.Items {
 			gfxPath := item.GetGFX()
